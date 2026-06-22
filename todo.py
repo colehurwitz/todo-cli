@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""A simple TODO list CLI - basic version with only add and list."""
+"""A simple TODO list CLI."""
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -39,12 +40,12 @@ def list_todos() -> None:
         print(f"[{status}] {i}. {todo['text']}")
 
 
-def done_todo(task_id: int) -> None:
-    """Mark a todo as done by 1-based ID."""
+def done_todo(task_id: int) -> int:
+    """Mark a todo as done by 1-based ID. Returns exit code."""
     todos = load_todos()
     if task_id < 1 or task_id > len(todos):
-        print(f"Error: Invalid task ID {task_id}")
-        sys.exit(1)
+        print(f"Error: Invalid task ID {task_id}", file=sys.stderr)
+        return 1
     todo = todos[task_id - 1]
     if todo["done"]:
         print(f"Already done: {todo['text']}")
@@ -52,17 +53,19 @@ def done_todo(task_id: int) -> None:
         todo["done"] = True
         save_todos(todos)
         print(f"Completed: {todo['text']}")
+    return 0
 
 
-def remove_todo(task_id: int) -> None:
-    """Remove a todo by 1-based ID."""
+def remove_todo(task_id: int) -> int:
+    """Remove a todo by 1-based ID. Returns exit code."""
     todos = load_todos()
     if task_id < 1 or task_id > len(todos):
-        print(f"Error: Invalid task ID {task_id}")
-        sys.exit(1)
+        print(f"Error: Invalid task ID {task_id}", file=sys.stderr)
+        return 1
     todo = todos.pop(task_id - 1)
     save_todos(todos)
     print(f"Removed: {todo['text']}")
+    return 0
 
 
 def clear_todos() -> None:
@@ -77,48 +80,47 @@ def clear_todos() -> None:
     print(f"Cleared {completed_count} completed todos")
 
 
-def main():
-    """Main entry point."""
-    if len(sys.argv) < 2:
-        print("Usage: todo.py <command> [args]")
-        print("Commands: add <text>, list, done <id>, remove <id>, clear")
-        sys.exit(1)
+def main() -> int:
+    """Main entry point. Returns exit code."""
+    parser = argparse.ArgumentParser(description="Simple TODO list CLI")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    command = sys.argv[1]
+    # add command
+    add_parser = subparsers.add_parser("add", help="Add a new todo")
+    add_parser.add_argument("text", nargs="+", help="The todo text")
 
-    if command == "add":
-        if len(sys.argv) < 3:
-            print("Error: add requires text")
-            sys.exit(1)
-        add_todo(" ".join(sys.argv[2:]))
-    elif command == "list":
+    # list command
+    subparsers.add_parser("list", help="List all todos")
+
+    # done command
+    done_parser = subparsers.add_parser("done", help="Mark a todo as done")
+    done_parser.add_argument("id", type=int, help="The todo ID to mark as done")
+
+    # remove command
+    remove_parser = subparsers.add_parser("remove", help="Remove a todo")
+    remove_parser.add_argument("id", type=int, help="The todo ID to remove")
+
+    # clear command
+    subparsers.add_parser("clear", help="Clear all completed todos")
+
+    args = parser.parse_args()
+
+    if args.command == "add":
+        add_todo(" ".join(args.text))
+        return 0
+    elif args.command == "list":
         list_todos()
-    elif command == "done":
-        if len(sys.argv) < 3:
-            print("Error: done requires a task ID")
-            sys.exit(1)
-        try:
-            task_id = int(sys.argv[2])
-        except ValueError:
-            print(f"Error: Invalid task ID '{sys.argv[2]}' - must be a number")
-            sys.exit(1)
-        done_todo(task_id)
-    elif command == "remove":
-        if len(sys.argv) < 3:
-            print("Error: remove requires a task ID")
-            sys.exit(1)
-        try:
-            task_id = int(sys.argv[2])
-        except ValueError:
-            print(f"Error: Invalid task ID '{sys.argv[2]}' - must be a number")
-            sys.exit(1)
-        remove_todo(task_id)
-    elif command == "clear":
+        return 0
+    elif args.command == "done":
+        return done_todo(args.id)
+    elif args.command == "remove":
+        return remove_todo(args.id)
+    elif args.command == "clear":
         clear_todos()
-    else:
-        print(f"Unknown command: {command}")
-        sys.exit(1)
+        return 0
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
