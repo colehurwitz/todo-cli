@@ -50,11 +50,22 @@ def done_todo(index: int) -> None:
     print(f"Done: {todos[index - 1]['text']}")
 
 
+def remove_todo(index: int) -> None:
+    """Remove a todo by 1-based index."""
+    todos = load_todos()
+    if index < 1 or index > len(todos):
+        print(f"Error: no todo at index {index}")
+        sys.exit(1)
+    removed = todos.pop(index - 1)
+    save_todos(todos)
+    print(f"Removed: {removed['text']}")
+
+
 def main():
     """Main entry point."""
     if len(sys.argv) < 2:
         print("Usage: todo.py <command> [args]")
-        print("Commands: add <text>, list, done <number>")
+        print("Commands: add <text>, list, done <number>, remove <number>")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -76,6 +87,16 @@ def main():
             print(f"Error: '{sys.argv[2]}' is not a number")
             sys.exit(1)
         done_todo(index)
+    elif command == "remove":
+        if len(sys.argv) < 3:
+            print("Error: remove requires a number")
+            sys.exit(1)
+        try:
+            index = int(sys.argv[2])
+        except ValueError:
+            print(f"Error: '{sys.argv[2]}' is not a number")
+            sys.exit(1)
+        remove_todo(index)
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)
